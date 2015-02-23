@@ -1,0 +1,80 @@
+---
+title: "Machine Learning Assignment"
+output: html_document
+---
+
+Purpose
+---
+The purpose of this assignemnet waas to clasify the manner in which text subjects did an excersie into one of 6 classes, based on a sample of 19662 observations.
+
+Getting and cleaning the data
+---
+After loading the data, a simple summary revealed that certain columns contained no information which could be used to create the model, thus the following columns were removed from both the testing and the training dataset:
+```{r}
+t <- read.csv(file="C:\\Users\\minxi_000\\Documents\\R\\Exp Data Assignment2\\pml-training.csv", header=TRUE, na.strings = c("", " ","NA"))
+t <- t[, !apply(t, 2, function(x) any(is.na(x)))]
+t<-t[,-(1:7)]
+
+testing<-read.csv(file="C:\\Users\\minxi_000\\Documents\\R\\Exp Data Assignment2\\pml-testing.csv", header=TRUE, na.strings = c("", " ","NA"))
+testing <- testing[, !apply(testing, 2, function(x) any(is.na(x)))]
+testing<-testing[,-(1:7)]
+
+```
+
+
+
+The next step was to split the original training dataset into a new training and a validation datasetusing the following:
+
+```{r}
+library(caret)
+library(e1071)
+library(randomForest)
+inTrain<-createDataPartition(y=t$classe, p=0.7, list=FALSE)
+training<-t[inTrain,]
+vali<-t[-inTrain,]
+```
+
+
+Fitting the model
+---
+In order to fit the model we needed was to separate the predictors from the predicted values and deal with the missing values using na.roughfix() from the randomForest package as follows:
+```{r}
+classe<-training[,53]
+predictors<-training[,-53]
+predictors[] <- lapply(predictors, function(x) as.numeric(as.character(x)))
+fp<-na.roughfix(predictors)
+
+
+vclasse<-vali[,53]
+vpredictors<-vali[,-53]
+vpredictors[] <- lapply(vpredictors, function(x) as.numeric(as.character(x)))
+vfp<-na.roughfix(vpredictors)
+```
+
+Then the model was fitted using the randomForest package:
+```{r}
+rfmodel<-randomForest(fp,classe)
+```
+
+Cross-validation
+---
+In order to acrtain the most relevant  predictors at the model and plot the error rate vs. number of trees, I used the following comands:
+```{r}
+varImpPlot(rfmodel)
+plot(rfmodel)
+```
+
+In order to validate the model, I've applied it to the validation dataset and then created the confusion matrix using the following commands:
+```{r}
+pvalidate<-predict(rfmodel,newdata=vfp)
+confusionMatrix(pvalidate,vclasse)
+```
+Reviewing the confusion matrix showed that the model accuracy is over 99%, hence I decided that the model is accurate enough for the purposes of the assignment.
+
+I then applied the same model to the test data (after performing the same tansformations I useed for the training dataset). I used the predicted values to complete the second part fo the assignment, and received a 100% accuracy:
+```{r}
+tclasse<-testing[,53]
+tpredictors<-testing[,-53]
+tfp<-na.roughfix(tpredictors)
+tvalidate<-predict(rfmodel,newdata=tfp)
+```
